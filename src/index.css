@@ -1,0 +1,19 @@
+/* App shell: typography and theme tokens live on `.pm-app` in App.css */
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
