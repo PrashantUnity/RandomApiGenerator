@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Download Random API Generator for Windows, macOS, and Linux — a CodeFryDev desktop mock API tool."
+    />
+    <title>Random API Generator · Downloads</title>
+    <link rel="icon" href="./codefrydev-icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#e5e9f4" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <img src="./codefrydev-icon.svg" width="96" height="96" alt="" />
+        <h1>Random API Generator</h1>
+        <p class="tagline">
+          Desktop mock API server ·
+          <a href="https://codefrydev.in" target="_blank" rel="noopener noreferrer">CodeFryDev</a>
+        </p>
+      </header>
+
+      <section class="card" aria-labelledby="downloads-heading">
+        <h2 id="downloads-heading">Downloads</h2>
+        <p class="lead">
+          Latest installers are published on GitHub Releases (built with GitHub Actions). Pick your
+          platform below or open the release page.
+        </p>
+        <div id="assets" class="assets" aria-live="polite">
+          <p class="loading">Loading latest release…</p>
+        </div>
+        <div class="actions">
+          <a
+            class="btn primary"
+            id="latest-link"
+            href="https://github.com/__GITHUB_REPOSITORY__/releases/latest"
+            >Latest release</a
+          >
+          <a class="btn" href="https://github.com/__GITHUB_REPOSITORY__">Repository</a>
+          <a class="btn" href="https://github.com/__GITHUB_REPOSITORY__/actions">CI builds</a>
+        </div>
+      </section>
+
+      <footer>
+        <a href="https://codefrydev.in">codefrydev.in</a>
+        ·
+        <a href="https://github.com/__GITHUB_REPOSITORY__/releases">All releases</a>
+      </footer>
+    </div>
+    <script>
+      const REPO = "__GITHUB_REPOSITORY__"
+      ;(function () {
+        var el = document.getElementById("assets")
+        if (!el || !REPO || REPO.indexOf("__") !== -1) {
+          if (el)
+            el.innerHTML =
+              '<p class="loading">Use the buttons below to open GitHub Releases.</p>'
+          return
+        }
+        fetch("https://api.github.com/repos/" + REPO + "/releases/latest")
+          .then(function (r) {
+            if (!r.ok) throw new Error("bad response")
+            return r.json()
+          })
+          .then(function (data) {
+            var assets = data.assets || []
+            if (!assets.length) {
+              el.innerHTML =
+                '<p class="loading">No files on this release yet. Use “Latest release” below.</p>'
+              return
+            }
+            var ul = document.createElement("ul")
+            ul.className = "asset-list"
+            assets.forEach(function (a) {
+              var li = document.createElement("li")
+              var link = document.createElement("a")
+              link.href = a.browser_download_url
+              link.className = "asset-link"
+              link.textContent = a.name
+              li.appendChild(link)
+              var mb = (a.size / 1024 / 1024).toFixed(1)
+              li.appendChild(document.createTextNode(" · " + mb + " MB"))
+              ul.appendChild(li)
+            })
+            el.innerHTML = ""
+            el.appendChild(ul)
+          })
+          .catch(function () {
+            el.innerHTML =
+              '<p class="loading">Could not load the file list. Use “Latest release” below.</p>'
+          })
+      })()
+    </script>
+  </body>
+</html>
