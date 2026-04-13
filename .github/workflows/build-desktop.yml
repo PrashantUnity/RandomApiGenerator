@@ -3,6 +3,7 @@ name: Build desktop
 on:
   push:
     branches: [main, master]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -78,3 +79,32 @@ jobs:
         with:
           name: RandomApiGenerator-linux-AppImage
           path: release/*.AppImage
+
+  # GitHub "Releases" only show items created as Releases — not workflow artifacts.
+  # This job runs when you push a tag like v1.0.0 and attaches the three builds to that release.
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-windows, build-macos, build-linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect release files
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" \) -exec cp -f {} release-assets/ \;
+          ls -la release-assets
+
+      - name: Create release with assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
