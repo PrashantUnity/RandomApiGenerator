@@ -5,93 +5,296 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Download Random API Generator for Windows, macOS, and Linux — a CodeFryDev desktop mock API tool."
+      content="Download Random API Generator for Windows, macOS, and Linux — CodeFryDev desktop app."
     />
-    <title>Random API Generator · Downloads</title>
+    <title>Download · Random API Generator</title>
     <link rel="icon" href="./codefrydev-icon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#e5e9f4" />
+    <meta name="theme-color" content="#0b0e12" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="wrap">
-      <header class="hero">
-        <img src="./codefrydev-icon.svg" width="96" height="96" alt="" />
-        <h1>Random API Generator</h1>
-        <p class="tagline">
-          Desktop mock API server ·
-          <a href="https://codefrydev.in" target="_blank" rel="noopener noreferrer">CodeFryDev</a>
-        </p>
-      </header>
+    <div class="backdrop">
+      <div class="download-modal" role="dialog" aria-labelledby="dlg-title">
+        <header class="modal-header">
+          <div>
+            <h1 id="dlg-title">Download Desktop App</h1>
+            <p class="brand-line">
+              Random API Generator ·
+              <a href="https://codefrydev.in" target="_blank" rel="noopener noreferrer">CodeFryDev</a>
+            </p>
+          </div>
+          <img
+            class="header-logo"
+            src="./codefrydev-icon.svg"
+            width="44"
+            height="44"
+            alt=""
+          />
+        </header>
 
-      <section class="card" aria-labelledby="downloads-heading">
-        <h2 id="downloads-heading">Downloads</h2>
-        <p class="lead">
-          Latest installers are published on GitHub Releases (built with GitHub Actions). Pick your
-          platform below or open the release page.
-        </p>
-        <div id="assets" class="assets" aria-live="polite">
-          <p class="loading">Loading latest release…</p>
+        <div class="version-bar" id="version-bar" aria-live="polite">
+          <span id="version-text">Checking latest release…</span>
         </div>
-        <div class="actions">
-          <a
-            class="btn primary"
-            id="latest-link"
-            href="https://github.com/__GITHUB_REPOSITORY__/releases/latest"
-            >Latest release</a
-          >
-          <a class="btn" href="https://github.com/__GITHUB_REPOSITORY__">Repository</a>
-          <a class="btn" href="https://github.com/__GITHUB_REPOSITORY__/actions">CI builds</a>
-        </div>
-      </section>
 
-      <footer>
-        <a href="https://codefrydev.in">codefrydev.in</a>
-        ·
-        <a href="https://github.com/__GITHUB_REPOSITORY__/releases">All releases</a>
-      </footer>
+        <div class="platform-list" id="platform-list">
+          <div class="loading-block" id="loading-el">Loading download options…</div>
+        </div>
+
+        <footer class="modal-footer">
+          <a href="https://github.com/__GITHUB_REPOSITORY__">Source</a>
+          ·
+          <a href="https://github.com/__GITHUB_REPOSITORY__/releases">All releases</a>
+          ·
+          <a href="https://github.com/__GITHUB_REPOSITORY__/actions">Builds</a>
+        </footer>
+      </div>
     </div>
+
+    <!-- OS icons (inline SVG) -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none">
+      <symbol id="icon-windows" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          d="M3 5.45l7.45-1.03v7.18H3V5.45zm0 13.52l7.45 1.03v-7.17H3v6.14zm8.55 1.13L21 21v-8.55h-9.45v6.67zm0-15.1L21 3v8.55h-9.45V4.5z"
+        />
+      </symbol>
+      <symbol id="icon-apple" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"
+        />
+      </symbol>
+      <symbol id="icon-linux" viewBox="0 0 24 24">
+        <path
+          fill="currentColor"
+          d="M4 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4zm0 2h16v12H4V6zm2 2v2h4V8H6zm6 0v2h6V8h-6zm-6 4v2h4v-2H6zm6 0v2h6v-2h-6zm-6 4v2h10v-2H6z"
+        />
+      </symbol>
+      <symbol id="icon-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 3v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round" />
+      </symbol>
+    </svg>
+
     <script>
       const REPO = "__GITHUB_REPOSITORY__"
+
+      function formatMb(bytes) {
+        return (bytes / 1024 / 1024).toFixed(1) + " MB"
+      }
+
+      function pickAsset(assets, test) {
+        for (var i = 0; i < assets.length; i++) {
+          if (test(assets[i].name)) return assets[i]
+        }
+        return null
+      }
+
+      function iconUse(id, label) {
+        var span = document.createElement("span")
+        span.className = "os-icon"
+        span.setAttribute("aria-hidden", "true")
+        span.innerHTML =
+          '<svg width="22" height="22" aria-hidden="true"><use href="#' + id + '" /></svg>'
+        return span
+      }
+
+      function downloadIconBtn() {
+        var b = document.createElement("span")
+        b.className = "download-btn"
+        b.innerHTML =
+          '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3v12m0 0l4-4m-4 4l-4-4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" stroke-linecap="round"/></svg>'
+        return b
+      }
+
+      function makeCard(opts) {
+        var card = document.createElement(opts.interactive ? "a" : "div")
+        card.className = "platform-card" + (opts.recommended ? " platform-card--recommended" : "")
+        card.className += opts.interactive ? " platform-card--interactive" : " platform-card--disabled"
+        if (opts.interactive) {
+          card.href = opts.href
+          card.target = "_blank"
+          card.rel = "noopener noreferrer"
+        }
+
+        if (opts.recommended) {
+          var badge = document.createElement("span")
+          badge.className = "badge-recommended"
+          badge.textContent = "RECOMMENDED"
+          card.appendChild(badge)
+        }
+
+        card.appendChild(iconUse(opts.iconId, opts.title))
+
+        var body = document.createElement("div")
+        body.className = "platform-body"
+        var name = document.createElement("span")
+        name.className = "os-name"
+        name.textContent = opts.title
+        body.appendChild(name)
+        var detail = document.createElement("span")
+        detail.className = "os-detail"
+        detail.textContent = opts.detail
+        body.appendChild(detail)
+        if (opts.sizeLine) {
+          var sz = document.createElement("span")
+          sz.className = "os-size"
+          sz.textContent = opts.sizeLine
+          body.appendChild(sz)
+        }
+        card.appendChild(body)
+
+        var btn = downloadIconBtn()
+        if (!opts.interactive) btn.setAttribute("aria-disabled", "true")
+        card.appendChild(btn)
+
+        return card
+      }
+
+      function renderFromRelease(data) {
+        var assets = data.assets || []
+        var tag = data.tag_name || data.name || "latest"
+        var vBar = document.getElementById("version-text")
+        if (vBar) vBar.innerHTML = "Latest version: <strong>" + tag + "</strong>"
+
+        var list = document.getElementById("platform-list")
+        var loading = document.getElementById("loading-el")
+        if (loading) loading.remove()
+
+        list.innerHTML = ""
+
+        var win =
+          pickAsset(assets, function (n) {
+            return /\.exe$/i.test(n) && !/blockmap/i.test(n)
+          }) ||
+          pickAsset(assets, function (n) {
+            return /\.exe$/i.test(n)
+          })
+
+        var mac =
+          pickAsset(assets, function (n) {
+            return /\.dmg$/i.test(n)
+          }) ||
+          pickAsset(assets, function (n) {
+            return /\.zip$/i.test(n) && /mac|darwin|osx/i.test(n)
+          })
+
+        var appImage = pickAsset(assets, function (n) {
+          return /\.AppImage$/i.test(n)
+        })
+        var deb = pickAsset(assets, function (n) {
+          return /\.deb$/i.test(n)
+        })
+
+        var linuxDetail = ".AppImage"
+        var linuxSizes = []
+        if (appImage) linuxSizes.push(formatMb(appImage.size))
+        if (deb) {
+          linuxDetail = ".AppImage & .deb"
+          linuxSizes.push(formatMb(deb.size))
+        }
+        if (!appImage && deb) linuxDetail = ".deb package"
+        var linuxSizeLine =
+          linuxSizes.length > 0 ? "(" + linuxSizes.join(" · ") + ")" : null
+
+        var linuxHref = appImage
+          ? appImage.browser_download_url
+          : deb
+            ? deb.browser_download_url
+            : null
+
+        list.appendChild(
+          makeCard({
+            iconId: "icon-windows",
+            title: "Windows",
+            detail: win ? ".exe installer" : "No .exe in this release yet",
+            sizeLine: win ? "(" + formatMb(win.size) + ")" : null,
+            href: win ? win.browser_download_url : "",
+            interactive: !!win,
+            recommended: false,
+          }),
+        )
+
+        list.appendChild(
+          makeCard({
+            iconId: "icon-apple",
+            title: "macOS",
+            detail: mac
+              ? mac.name.toLowerCase().endsWith(".dmg")
+                ? ".dmg disk image"
+                : ".zip archive"
+              : "No mac build in this release yet",
+            sizeLine: mac ? "(" + formatMb(mac.size) + ")" : null,
+            href: mac ? mac.browser_download_url : "",
+            interactive: !!mac,
+            recommended: true,
+          }),
+        )
+
+        list.appendChild(
+          makeCard({
+            iconId: "icon-linux",
+            title: "Linux",
+            detail: appImage || deb ? linuxDetail : "No Linux build in this release yet",
+            sizeLine: linuxSizeLine,
+            href: linuxHref || "",
+            interactive: !!(appImage || deb),
+            recommended: false,
+          }),
+        )
+
+        if (appImage && deb) {
+          var sub = document.createElement("p")
+          sub.className = "linux-deb-note"
+          var la = document.createElement("a")
+          la.href = deb.browser_download_url
+          la.target = "_blank"
+          la.rel = "noopener noreferrer"
+          la.textContent = "Download .deb (" + formatMb(deb.size) + ")"
+          sub.appendChild(la)
+          list.appendChild(sub)
+        }
+      }
+
+      function renderFallback() {
+        var vBar = document.getElementById("version-text")
+        if (vBar)
+          vBar.innerHTML =
+            'See <a href="https://github.com/' +
+            REPO +
+            '/releases/latest">GitHub Releases</a> for downloads.'
+
+        var list = document.getElementById("platform-list")
+        var loading = document.getElementById("loading-el")
+        if (loading) loading.remove()
+        list.innerHTML =
+          '<div class="error-block">Could not load release info. Open the latest release on GitHub.</div>'
+      }
+
       ;(function () {
-        var el = document.getElementById("assets")
-        if (!el || !REPO || REPO.indexOf("__") !== -1) {
-          if (el)
-            el.innerHTML =
-              '<p class="loading">Use the buttons below to open GitHub Releases.</p>'
+        if (!REPO || REPO.indexOf("__") !== -1) {
+          document.getElementById("version-text").textContent =
+            "Configure repository in deploy workflow for live versions."
+          renderFallback()
           return
         }
         fetch("https://api.github.com/repos/" + REPO + "/releases/latest")
           .then(function (r) {
-            if (!r.ok) throw new Error("bad response")
+            if (!r.ok) throw new Error("bad")
             return r.json()
           })
           .then(function (data) {
-            var assets = data.assets || []
-            if (!assets.length) {
-              el.innerHTML =
-                '<p class="loading">No files on this release yet. Use “Latest release” below.</p>'
+            if (!data.assets || !data.assets.length) {
+              document.getElementById("version-text").innerHTML =
+                'No files attached. <a href="https://github.com/' +
+                REPO +
+                '/releases/latest">Open releases</a>.'
+              renderFromRelease(data)
               return
             }
-            var ul = document.createElement("ul")
-            ul.className = "asset-list"
-            assets.forEach(function (a) {
-              var li = document.createElement("li")
-              var link = document.createElement("a")
-              link.href = a.browser_download_url
-              link.className = "asset-link"
-              link.textContent = a.name
-              li.appendChild(link)
-              var mb = (a.size / 1024 / 1024).toFixed(1)
-              li.appendChild(document.createTextNode(" · " + mb + " MB"))
-              ul.appendChild(li)
-            })
-            el.innerHTML = ""
-            el.appendChild(ul)
+            renderFromRelease(data)
           })
-          .catch(function () {
-            el.innerHTML =
-              '<p class="loading">Could not load the file list. Use “Latest release” below.</p>'
-          })
+          .catch(renderFallback)
       })()
     </script>
   </body>
