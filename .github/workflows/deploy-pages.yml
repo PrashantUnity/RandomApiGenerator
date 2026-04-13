@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, master]
     paths:
-      - "site/**"
+      - "docs/**"
       - "public/codefrydev-icon.svg"
       - ".github/workflows/deploy-pages.yml"
   release:
@@ -26,19 +26,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Copy brand icon into site
-        run: cp -f public/codefrydev-icon.svg site/codefrydev-icon.svg
+      - name: Sync icon into docs (matches repo root branding)
+        run: cp -f public/codefrydev-icon.svg docs/codefrydev-icon.svg
 
       - name: Inject repository for links and API
         run: |
           repo="${{ github.repository }}"
-          sed -i "s|__GITHUB_REPOSITORY__|${repo}|g" site/index.html
+          sed -i "s|__GITHUB_REPOSITORY__|${repo}|g" docs/index.html
 
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: docs
 
   deploy:
     environment:
