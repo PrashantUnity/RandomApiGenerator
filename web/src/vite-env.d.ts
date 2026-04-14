@@ -1,11 +1,25 @@
 /// <reference types="vite/client" />
 
-import type { EndpointConfig, ServerStatusPayload, StartServerResult } from './types'
+import type {
+  EndpointConfig,
+  LoadAppStateResult,
+  MockDataMode,
+  PersistedAppState,
+  SaveAppStateResult,
+  ServerStatusPayload,
+  StartServerResult,
+} from './types'
+
+export type StartServerPayload =
+  | EndpointConfig[]
+  | { endpoints: EndpointConfig[]; mockDataMode?: MockDataMode }
 
 declare global {
   interface Window {
     electronAPI?: {
-      startServer: (config: EndpointConfig[]) => Promise<StartServerResult>
+      loadAppState: () => Promise<LoadAppStateResult>
+      saveAppState: (state: PersistedAppState) => Promise<SaveAppStateResult>
+      startServer: (config: StartServerPayload) => Promise<StartServerResult>
       stopServer: () => Promise<{ status: string }>
       onServerStatus: (callback: (data: ServerStatusPayload) => void) => () => void
     }

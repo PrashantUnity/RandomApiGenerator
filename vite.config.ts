@@ -11,6 +11,9 @@ export default defineConfig({
   root: path.resolve(__dirname, 'web'),
   publicDir: path.resolve(__dirname, 'public'),
   plugins: [react()],
+  optimizeDeps: {
+    include: ['@faker-js/faker'],
+  },
   base: './',
   server: {
     host: '127.0.0.1',

@@ -1,3 +1,7 @@
+export type HttpMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+
+export const HTTP_METHODS: HttpMethod[] = ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']
+
 export type SchemaFieldType =
   | 'string'
   | 'number'
@@ -8,6 +12,11 @@ export type SchemaFieldType =
   | 'uuid'
   | 'date'
   | 'name'
+  | 'lorem'
+  | 'lorem_paragraph'
+  | 'slug'
+  | 'url'
+  | 'picsum'
 
 export interface SchemaField {
   name: string
@@ -37,4 +46,53 @@ export interface StartServerResult {
   port?: number
   baseUrl?: string
   error?: string
+}
+
+/** How mock list/object values are generated for the mock HTTP server. */
+export type MockDataMode = 'seeded' | 'random'
+
+export const PERSIST_STATE_VERSION = 3 as const
+
+export interface MockCollection {
+  id: string
+  name: string
+  endpoints: EndpointConfig[]
+}
+
+export interface MockWorkspace {
+  id: string
+  name: string
+  collections: MockCollection[]
+}
+
+/** Full app state persisted to SQLite (v2). */
+export interface PersistedAppState {
+  version: typeof PERSIST_STATE_VERSION
+  workspaces: MockWorkspace[]
+  selectedWorkspaceId: string
+  selectedCollectionId: string
+  selectedRouteIndex: number
+  requestMethod: HttpMethod
+  sampleCount: string
+  mockDataMode: MockDataMode
+}
+
+export type LoadAppStateResult =
+  | {
+      ok: true
+      data: PersistedAppState | null
+      /** Shown once after hydrate (invalid DB row, missing DB, etc.). */
+      warning?: string
+      /** When true, skip auto-save; local SQLite could not be opened. */
+      persistUnavailable?: boolean
+    }
+  | { ok: false; error: string }
+
+export type SaveAppStateResult = { ok: true } | { ok: false; error: string }
+
+export interface ResponseMeta {
+  status: number
+  statusText: string
+  timeMs: number
+  sizeBytes: number
 }

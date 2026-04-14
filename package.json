@@ -9,16 +9,23 @@
     "url": "https://github.com/codefrydev/RandomApiGenerator.git"
   },
   "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
   "main": "electron/main.cjs",
   "scripts": {
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "dev": "concurrently -k \"cross-env BROWSER=none vite\" \"wait-on tcp:127.0.0.1:5173 && cross-env ELECTRON_IS_DEV=1 electron .\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "node --test \"test/**/*.test.cjs\"",
     "preview": "vite preview",
     "electron:preview": "npm run build && electron .",
     "dist": "npm run build && electron-builder"
   },
   "dependencies": {
+    "@faker-js/faker": "^9.9.0",
+    "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "react": "^19.2.4",
@@ -26,7 +33,7 @@
     "react-router-dom": "^7.14.0"
   },
   "devDependencies": {
-    "async-exit-hook": "^2.0.1",
+    "@electron/rebuild": "^4.0.3",
     "@eslint/js": "^9.39.4",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
@@ -34,6 +41,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "async-exit-hook": "^2.0.1",
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^41.2.0",
@@ -50,6 +58,7 @@
   "build": {
     "appId": "com.randomapigenerator.app",
     "productName": "RandomApiGenerator",
+    "asarUnpack": ["**/node_modules/better-sqlite3/**/*"],
     "directories": {
       "output": "release"
     },
