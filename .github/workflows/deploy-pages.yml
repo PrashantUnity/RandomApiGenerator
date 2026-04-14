@@ -29,10 +29,9 @@ jobs:
       - name: Sync icon into docs (matches repo root branding)
         run: cp -f public/codefrydev-icon.svg docs/codefrydev-icon.svg
 
-      - name: Inject repository for links and API
-        run: |
-          repo="${{ github.repository }}"
-          sed -i "s|__GITHUB_REPOSITORY__|${repo}|g" docs/index.html
+      # Single source of truth for owner/repo (works with custom domains; sed on HTML often breaks)
+      - name: Write docs/repo-config.json
+        run: printf '%s\n' '{"repository":"${{ github.repository }}"}' > docs/repo-config.json
 
       - uses: actions/configure-pages@v4
 
