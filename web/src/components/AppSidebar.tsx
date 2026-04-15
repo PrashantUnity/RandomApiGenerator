@@ -1,6 +1,6 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { AppUiMode, HttpMethod, PersistedAppState } from '../types'
-import { CODEFRYDEV_URL } from '../constants'
+import { CODEFRYDEV_ICON_URL, CODEFRYDEV_URL } from '../constants'
 import {
   MAX_COLLECTIONS_PER_WORKSPACE,
   MAX_WORKSPACES,
@@ -62,7 +62,7 @@ export function AppSidebar({
         >
           <span className="pm-sidebar__logo-mark">
             <img
-              src="/codefrydev-icon.svg"
+              src={CODEFRYDEV_ICON_URL}
               width={28}
               height={28}
               alt=""
@@ -296,7 +296,7 @@ export function AppSidebar({
         >
           <img
             className="pm-sidebar__cfd-icon"
-            src="/codefrydev-icon.svg"
+            src={CODEFRYDEV_ICON_URL}
             width={18}
             height={18}
             alt=""

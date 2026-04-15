@@ -1,9 +1,14 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, Menu } = require('electron');
 const { openDb } = require('./db.cjs');
 const state = require('./state.cjs');
 const { createWindow, isDev } = require('./window.cjs');
 const { registerAppStateHandlers } = require('./ipc/app-state.cjs');
 const { registerServerHandlers } = require('./ipc/server.cjs');
+
+// Windows: correct taskbar / shortcut grouping and notification branding (must match packaged app id).
+if (process.platform === 'win32') {
+  app.setAppUserModelId('com.randomapigenerator.app');
+}
 
 registerAppStateHandlers();
 registerServerHandlers();
@@ -24,6 +29,8 @@ if (!gotLock) {
   }
 
   app.whenReady().then(() => {
+    Menu.setApplicationMenu(null);
+
     try {
       state.appDb = openDb(app.getPath('userData'));
     } catch (e) {
