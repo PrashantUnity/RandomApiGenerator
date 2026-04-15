@@ -1,6 +1,10 @@
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react'
-import type { PersistedAppState } from '../types'
+import type { AppUiMode, PersistedAppState } from '../types'
 import { getElectronApi } from '../electronBridge'
+
+function normalizeUiModeLoaded(raw: unknown): AppUiMode {
+  return raw === 'queryApi' || raw === 'genApi' ? raw : 'genApi'
+}
 
 type Args = {
   tree: PersistedAppState
@@ -24,7 +28,10 @@ export function usePersistedAppState({ tree, setTree }: Args) {
       if (r.ok) {
         if (r.warning) setPersistBannerMessage(r.warning)
         if (r.persistUnavailable) setPersistDisabled(true)
-        if (r.data) setTree(r.data)
+        if (r.data) {
+          const d = r.data
+          setTree({ ...d, uiMode: normalizeUiModeLoaded(d.uiMode) })
+        }
       } else {
         setPersistBannerMessage(r.error)
         setPersistDisabled(true)

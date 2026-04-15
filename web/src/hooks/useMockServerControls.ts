@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { EndpointConfig, MockDataMode, ServerStatusPayload, StartServerResult } from '../types'
+import type { EndpointConfig, HttpMethod, MockDataMode, ServerStatusPayload, StartServerResult } from '../types'
 import { getElectronApi } from '../electronBridge'
 
 export function useMockServerControls(
   electron: ReturnType<typeof getElectronApi>,
   flatEndpoints: EndpointConfig[],
   mockDataMode: MockDataMode,
+  defaultMethod: HttpMethod,
 ) {
   const [server, setServer] = useState<ServerStatusPayload>({ status: 'stopped' })
   const [busy, setBusy] = useState(false)
@@ -14,6 +15,8 @@ export function useMockServerControls(
   flatEndpointsRef.current = flatEndpoints
   const serverRef = useRef(server)
   serverRef.current = server
+  const defaultMethodRef = useRef(defaultMethod)
+  defaultMethodRef.current = defaultMethod
 
   useEffect(() => {
     if (!electron) return
@@ -27,6 +30,18 @@ export function useMockServerControls(
     }
   }, [server])
 
+  const applyStartResult = useCallback((result: StartServerResult) => {
+    if (result.status === 'error') {
+      setServer({ status: 'error', error: result.error ?? 'Unknown error' })
+    } else {
+      setServer({
+        status: 'running',
+        port: result.port,
+        baseUrl: result.baseUrl,
+      })
+    }
+  }, [])
+
   const handleStart = useCallback(async () => {
     if (!electron) return
     setBusy(true)
@@ -34,20 +49,18 @@ export function useMockServerControls(
       const result: StartServerResult = await electron.startServer({
         endpoints: flatEndpointsRef.current,
         mockDataMode,
+        defaultMethod: defaultMethodRef.current,
       })
-      if (result.status === 'error') {
-        setServer({ status: 'error', error: result.error ?? 'Unknown error' })
-      } else {
-        setServer({
-          status: 'running',
-          port: result.port,
-          baseUrl: result.baseUrl,
-        })
-      }
+      applyStartResult(result)
+    } catch (e) {
+      setServer({
+        status: 'error',
+        error: e instanceof Error ? e.message : String(e),
+      })
     } finally {
       setBusy(false)
     }
-  }, [electron, mockDataMode])
+  }, [electron, mockDataMode, applyStartResult])
 
   const handleStop = useCallback(async () => {
     if (!electron) return
@@ -55,21 +68,40 @@ export function useMockServerControls(
     try {
       await electron.stopServer()
       setServer({ status: 'stopped' })
+    } catch (e) {
+      setServer({
+        status: 'error',
+        error: e instanceof Error ? e.message : String(e),
+      })
     } finally {
       setBusy(false)
     }
   }, [electron])
 
   /** Call after updating `mockDataMode` in app state to restart the mock server with the new mode. */
-  const restartServerIfRunningWithMode = useCallback((mode: MockDataMode) => {
-    const el = getElectronApi()
-    if (el && serverRef.current.status === 'running') {
-      void el.startServer({
-        endpoints: flatEndpointsRef.current,
-        mockDataMode: mode,
-      })
-    }
-  }, [])
+  const restartServerIfRunningWithMode = useCallback(
+    async (mode: MockDataMode) => {
+      const el = getElectronApi()
+      if (!el || serverRef.current.status !== 'running') return
+      setBusy(true)
+      try {
+        const result: StartServerResult = await el.startServer({
+          endpoints: flatEndpointsRef.current,
+          mockDataMode: mode,
+          defaultMethod: defaultMethodRef.current,
+        })
+        applyStartResult(result)
+      } catch (e) {
+        setServer({
+          status: 'error',
+          error: e instanceof Error ? e.message : String(e),
+        })
+      } finally {
+        setBusy(false)
+      }
+    },
+    [applyStartResult],
+  )
 
   return {
     server,

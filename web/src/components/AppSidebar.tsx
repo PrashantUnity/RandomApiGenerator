@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction } from 'react'
-import type { HttpMethod, PersistedAppState } from '../types'
+import type { AppUiMode, HttpMethod, PersistedAppState } from '../types'
 import { CODEFRYDEV_URL } from '../constants'
 import {
   MAX_COLLECTIONS_PER_WORKSPACE,
@@ -17,29 +17,38 @@ type ElectronApi = NonNullable<Window['electronAPI']>
 export type AppSidebarProps = {
   tree: PersistedAppState
   setTree: Dispatch<SetStateAction<PersistedAppState>>
+  uiMode: AppUiMode
+  onUiModeChange: (mode: AppUiMode) => void
   running: boolean
   electron: ElectronApi | undefined
-  requestMethod: HttpMethod
+  /** Default method for new routes and fallback when a route has no per-route method. */
+  defaultRequestMethod: HttpMethod
   workspaceRenameOpen: boolean
   setWorkspaceRenameOpen: Dispatch<SetStateAction<boolean>>
   isCollectionExpanded: (collectionId: string) => boolean
   toggleCollectionExpanded: (collectionId: string) => void
   onAddRoute: () => void
+  /** Gen API: opens Import & env tab. Query API: opens Import & env in main area. */
+  onOpenImportExportTab?: () => void
 }
 
 export function AppSidebar({
   tree,
   setTree,
+  uiMode,
+  onUiModeChange,
   running,
   electron,
-  requestMethod,
+  defaultRequestMethod,
   workspaceRenameOpen,
   setWorkspaceRenameOpen,
   isCollectionExpanded,
   toggleCollectionExpanded,
   onAddRoute,
+  onOpenImportExportTab,
 }: AppSidebarProps) {
   const selectedWorkspace = tree.workspaces.find((w) => w.id === tree.selectedWorkspaceId)
+  const isGenApi = uiMode === 'genApi'
 
   return (
     <aside className="pm-sidebar" aria-label="Workspace and mock routes">
@@ -65,6 +74,33 @@ export function AppSidebar({
           <span className="pm-sidebar__title">Random API</span>
           <span className="pm-sidebar__subtitle">codefrydev.in</span>
         </div>
+      </div>
+
+      <div className="pm-sidebar__section pm-sidebar__section--mode">
+        <span className="pm-sidebar__section-label">Mode</span>
+        <div className="pm-segmented pm-segmented--stretch" role="group" aria-label="App mode">
+          <button
+            type="button"
+            className={`pm-segmented__btn ${isGenApi ? 'pm-segmented__btn--active' : ''}`}
+            onClick={() => onUiModeChange('genApi')}
+            aria-pressed={isGenApi}
+          >
+            Gen API
+          </button>
+          <button
+            type="button"
+            className={`pm-segmented__btn ${!isGenApi ? 'pm-segmented__btn--active' : ''}`}
+            onClick={() => onUiModeChange('queryApi')}
+            aria-pressed={!isGenApi}
+          >
+            Query API
+          </button>
+        </div>
+        {!isGenApi ? (
+          <p className="pm-sidebar__mode-hint">
+            HTTP client plus import/export. Use Gen API to start the mock server and edit response schemas.
+          </p>
+        ) : null}
       </div>
 
       <div className="pm-sidebar__section pm-sidebar__section--workspace">
@@ -142,6 +178,7 @@ export function AppSidebar({
                 selectedWorkspace.collections.length >= MAX_COLLECTIONS_PER_WORKSPACE
               }
               title={`New folder (max ${MAX_COLLECTIONS_PER_WORKSPACE})`}
+              aria-label={`New collection (max ${MAX_COLLECTIONS_PER_WORKSPACE})`}
             >
               + Collection
             </button>
@@ -151,13 +188,14 @@ export function AppSidebar({
               onClick={onAddRoute}
               disabled={running}
               title="Add mock route under the selected collection"
+              aria-label="Add mock request route"
             >
               + Request
             </button>
           </div>
         </div>
         <div className="pm-sidebar__collections-scroll">
-          <div className="pm-tree" role="tree" aria-label="Collections and requests">
+          <div className="pm-tree" role="region" aria-label="Collections and requests">
             {selectedWorkspace?.collections.map((col) => {
               const expanded = isCollectionExpanded(col.id)
               return (
@@ -205,6 +243,7 @@ export function AppSidebar({
                       {col.endpoints.map((ep, ri) => {
                         const isActive =
                           col.id === tree.selectedCollectionId && ri === tree.selectedRouteIndex
+                        const routeMethod = ep.method ?? defaultRequestMethod
                         return (
                           <li key={`${col.id}-${ri}`}>
                             <button
@@ -215,13 +254,13 @@ export function AppSidebar({
                                   selectRoute(t, tree.selectedWorkspaceId, col.id, ri),
                                 )
                               }
-                              title={`Mock path · sends as ${requestMethod} (method is set in the request bar)`}
+                              title={`Mock path · sends as ${routeMethod} (method in request bar)`}
                             >
                               <span
-                                className={`pm-method-badge pm-method-badge--${requestMethod}`}
-                                title="Matches the HTTP method in the request bar"
+                                className={`pm-method-badge pm-method-badge--${routeMethod}`}
+                                title="HTTP method for this route"
                               >
-                                {requestMethod}
+                                {routeMethod}
                               </span>
                               <span className="pm-tree__route-path">
                                 {ep.path ? `/${ep.path.replace(/^\/+/, '')}` : '/'}
@@ -240,6 +279,15 @@ export function AppSidebar({
       </div>
 
       <div className="pm-sidebar__footer">
+        {onOpenImportExportTab ? (
+          <button
+            type="button"
+            className="pm-sidebar__tools"
+            onClick={onOpenImportExportTab}
+          >
+            Import / export · variables
+          </button>
+        ) : null}
         <a
           className="pm-sidebar__cfd"
           href={CODEFRYDEV_URL}

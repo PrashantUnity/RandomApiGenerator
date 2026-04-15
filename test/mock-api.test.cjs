@@ -16,70 +16,135 @@ describe('validateEndpointsConfig', () => {
   });
 
   it('accepts a minimal schema endpoint', () => {
-    const r = validateEndpointsConfig([
-      {
-        path: 'users',
-        schema: [{ name: 'id', type: 'integer' }],
-      },
-    ]);
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'users',
+          schema: [{ name: 'id', type: 'integer' }],
+        },
+      ],
+      'GET',
+    );
     assert.equal(r.ok, true);
   });
 
   it('rejects duplicate routes after sanitization', () => {
-    const r = validateEndpointsConfig([
-      {
-        path: 'foo',
-        schema: [{ name: 'a', type: 'string' }],
-      },
-      {
-        path: 'foo',
-        schema: [{ name: 'b', type: 'string' }],
-      },
-    ]);
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'foo',
+          schema: [{ name: 'a', type: 'string' }],
+        },
+        {
+          path: 'foo',
+          schema: [{ name: 'b', type: 'string' }],
+        },
+      ],
+      'GET',
+    );
     assert.equal(r.ok, false);
     assert.ok(String(r.error).includes('duplicate'));
   });
 
+  it('allows same path with different methods', () => {
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'foo',
+          method: 'GET',
+          schema: [{ name: 'a', type: 'string' }],
+        },
+        {
+          path: 'foo',
+          method: 'POST',
+          schema: [{ name: 'b', type: 'string' }],
+        },
+      ],
+      'GET',
+    );
+    assert.equal(r.ok, true);
+  });
+
   it('rejects invalid JSON in sampleJson mode', () => {
-    const r = validateEndpointsConfig([
-      {
-        path: 'x',
-        responseMode: 'sampleJson',
-        sampleJson: '{',
-      },
-    ]);
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'x',
+          responseMode: 'sampleJson',
+          sampleJson: '{',
+        },
+      ],
+      'GET',
+    );
     assert.equal(r.ok, false);
   });
 
   it('accepts sampleJson mode with object', () => {
-    const r = validateEndpointsConfig([
-      {
-        path: 'widgets',
-        responseMode: 'sampleJson',
-        sampleJson: '{"a":1}',
-      },
-    ]);
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'widgets',
+          responseMode: 'sampleJson',
+          sampleJson: '{"a":1}',
+        },
+      ],
+      'GET',
+    );
     assert.equal(r.ok, true);
   });
 
   it('rejects empty example array in sampleJson mode', () => {
-    const r = validateEndpointsConfig([
-      {
-        path: 'a',
-        responseMode: 'sampleJson',
-        sampleJson: '[]',
-      },
-    ]);
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'a',
+          responseMode: 'sampleJson',
+          sampleJson: '[]',
+        },
+      ],
+      'GET',
+    );
     assert.equal(r.ok, false);
   });
 
   it('rejects invalid schema field name', () => {
-    const r = validateEndpointsConfig([
-      {
-        path: 'p',
-        schema: [{ name: 'bad-name', type: 'string' }],
-      },
-    ]);
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'p',
+          schema: [{ name: 'bad-name', type: 'string' }],
+        },
+      ],
+      'GET',
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it('rejects named example body that is not an object or array', () => {
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'x',
+          responseSource: 'example',
+          examples: [{ name: 'a', body: '"hi"' }],
+        },
+      ],
+      'GET',
+    );
+    assert.equal(r.ok, false);
+  });
+
+  it('rejects empty array in named example body', () => {
+    const r = validateEndpointsConfig(
+      [
+        {
+          path: 'x',
+          responseSource: 'example',
+          examples: [{ name: 'a', body: '[]' }],
+        },
+      ],
+      'GET',
+    );
     assert.equal(r.ok, false);
   });
 });
@@ -111,7 +176,7 @@ describe('normalizeEndpointsForRoutes + buildJsonArrayResponse', () => {
         ],
       },
     ];
-    const normalized = normalizeEndpointsForRoutes(raw);
+    const normalized = normalizeEndpointsForRoutes(raw, 'GET');
     assert.equal(normalized.length, 1);
     const rows = buildJsonArrayResponse(normalized[0], 2, { mockDataMode: 'seeded' });
     assert.equal(rows.length, 2);
@@ -125,7 +190,7 @@ describe('normalizeEndpointsForRoutes + buildJsonArrayResponse', () => {
         schema: [{ name: 'id', type: 'integer' }],
       },
     ];
-    const ep = normalizeEndpointsForRoutes(raw)[0];
+    const ep = normalizeEndpointsForRoutes(raw, 'GET')[0];
     const one = buildSingleObject(ep, { extra: true }, { mockDataMode: 'seeded' });
     assert.equal(one.extra, true);
   });

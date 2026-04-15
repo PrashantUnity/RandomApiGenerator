@@ -4,16 +4,26 @@
   color-scheme: light;
 }
 
+/* Shell: fill the webview/window. Percentage heights on html/body are unreliable in
+   Electron; fixed inset pins #root to the actual client area (no bottom gap). */
+html {
+  height: 100%;
+}
+
 body {
   margin: 0;
+  height: 100%;
+  overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
-  width: 100%;
-  min-height: 100svh;
+  position: fixed;
+  inset: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
+  min-height: 0;
+  overflow: hidden;
 }

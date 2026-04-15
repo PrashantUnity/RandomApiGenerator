@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import type {
+  EndpointExample,
   EndpointResponseMode,
   HttpMethod,
   MockDataMode,
@@ -15,6 +16,7 @@ import {
   updateSelectedEndpoint,
 } from '../workspaceModel'
 import { computeDisplayUrl, computePlaceholderUrl } from '../lib/buildAppUrls'
+import { substitutePathVars } from '../lib/envSubstitute'
 import { usePersistedAppState } from './usePersistedAppState'
 import { useMockServerControls } from './useMockServerControls'
 import { useRequestPlayback } from './useRequestPlayback'
@@ -43,6 +45,20 @@ export function useRandomApiApp() {
   const sampleCount = tree.sampleCount
   const mockDataMode: MockDataMode = tree.mockDataMode ?? 'seeded'
 
+  const selectedEnv = useMemo(
+    () => tree.environments.find((e) => e.id === tree.selectedEnvironmentId),
+    [tree.environments, tree.selectedEnvironmentId],
+  )
+
+  const flatEndpointsForServer = useMemo(() => {
+    const vars = selectedEnv?.variables ?? {}
+    return flatEndpoints.map((ep) => ({
+      ...ep,
+      path: substitutePathVars(ep.path.replace(/^\/+/, ''), vars),
+      method: ep.method ?? tree.requestMethod,
+    }))
+  }, [flatEndpoints, selectedEnv, tree.requestMethod])
+
   const {
     server,
     busy,
@@ -50,37 +66,54 @@ export function useRandomApiApp() {
     handleStart: startServerBase,
     handleStop: stopServerBase,
     restartServerIfRunningWithMode,
-  } = useMockServerControls(electron, flatEndpoints, mockDataMode)
+  } = useMockServerControls(electron, flatEndpointsForServer, mockDataMode, tree.requestMethod)
 
   const request = useRequestPlayback()
 
-  const pathSegment = selected?.path.replace(/^\/+/, '') ?? ''
+  const effectiveMethod: HttpMethod = selected?.method ?? tree.requestMethod
+  const effectivePathSegment = useMemo(() => {
+    const raw = selected?.path.replace(/^\/+/, '') ?? ''
+    return substitutePathVars(raw, selectedEnv?.variables ?? {})
+  }, [selected?.path, selectedEnv?.variables])
+
   const running = server.status === 'running'
   const baseUrl = server.status === 'running' ? (server.baseUrl ?? '') : ''
 
   const displayUrl = useMemo(
     () =>
-      computeDisplayUrl(running, baseUrl, pathSegment, requestMethod, sampleCount),
-    [running, baseUrl, pathSegment, requestMethod, sampleCount],
+      computeDisplayUrl(running, baseUrl, effectivePathSegment, effectiveMethod, sampleCount),
+    [running, baseUrl, effectivePathSegment, effectiveMethod, sampleCount],
   )
 
   const placeholderUrl = useMemo(
     () =>
-      computePlaceholderUrl(baseUrl, lastKnownBaseUrl, pathSegment, requestMethod, sampleCount),
-    [baseUrl, lastKnownBaseUrl, pathSegment, requestMethod, sampleCount],
+      computePlaceholderUrl(
+        baseUrl,
+        lastKnownBaseUrl,
+        effectivePathSegment,
+        effectiveMethod,
+        sampleCount,
+      ),
+    [baseUrl, lastKnownBaseUrl, effectivePathSegment, effectiveMethod, sampleCount],
   )
 
-  const showCountQuery = requestMethod === 'GET' || requestMethod === 'HEAD'
+  const showCountQuery = effectiveMethod === 'GET' || effectiveMethod === 'HEAD'
   const showRequestBodyEditor =
-    requestMethod === 'POST' || requestMethod === 'PUT' || requestMethod === 'PATCH'
+    effectiveMethod === 'POST' || effectiveMethod === 'PUT' || effectiveMethod === 'PATCH'
 
   const requestCodeSpec = useMemo(() => {
     const url = displayUrl || placeholderUrl
     const trimmed = request.requestBody.trim()
     const jsonBody: string | undefined =
       showRequestBodyEditor && trimmed.length > 0 ? trimmed : undefined
-    return { method: requestMethod, url, jsonBody }
-  }, [displayUrl, placeholderUrl, requestMethod, request.requestBody, showRequestBodyEditor])
+    return { method: effectiveMethod, url, jsonBody }
+  }, [
+    displayUrl,
+    placeholderUrl,
+    effectiveMethod,
+    request.requestBody,
+    showRequestBodyEditor,
+  ])
 
   const handleStart = useCallback(async () => {
     request.resetResponse()
@@ -95,7 +128,7 @@ export function useRandomApiApp() {
   const setMockDataMode = useCallback(
     (mode: MockDataMode) => {
       setTree((t) => ({ ...t, mockDataMode: mode }))
-      restartServerIfRunningWithMode(mode)
+      void restartServerIfRunningWithMode(mode)
     },
     [restartServerIfRunningWithMode],
   )
@@ -214,13 +247,42 @@ export function useRandomApiApp() {
   }, [responseMode, selected])
 
   const sendRequest = useCallback(async () => {
-    await request.sendRequest(server, selected, sampleCount, requestMethod, showRequestBodyEditor)
-  }, [request, server, selected, sampleCount, requestMethod, showRequestBodyEditor])
+    await request.sendRequest(
+      server,
+      sampleCount,
+      effectiveMethod,
+      showRequestBodyEditor,
+      effectivePathSegment,
+    )
+  }, [
+    request,
+    server,
+    sampleCount,
+    effectiveMethod,
+    showRequestBodyEditor,
+    effectivePathSegment,
+  ])
 
   const setRequestMethod = (m: HttpMethod) => {
-    setTree((t) => ({ ...t, requestMethod: m }))
+    setTree((t) => {
+      const withRoute = updateSelectedEndpoint(t, (ep) => ({ ...ep, method: m }))
+      return { ...withRoute, requestMethod: m }
+    })
     request.setRequestBody('')
   }
+
+  const updateEndpointMock = useCallback(
+    (patch: {
+      delayMs?: number | undefined
+      httpStatus?: number | undefined
+      responseSource?: 'generated' | 'example'
+      activeExampleIndex?: number
+      examples?: EndpointExample[]
+    }) => {
+      setTree((t) => updateSelectedEndpoint(t, (ep) => ({ ...ep, ...patch })))
+    },
+    [],
+  )
 
   const isCollectionExpanded = (collectionId: string) => collectionExpanded[collectionId] !== false
 
@@ -257,8 +319,10 @@ export function useRandomApiApp() {
     selectedWorkspace,
     selectedCollection,
     selected,
+    selectedEnv,
     flatEndpoints,
     requestMethod,
+    effectiveMethod,
     sampleCount,
     mockDataMode,
     setMockDataMode,
@@ -266,6 +330,7 @@ export function useRandomApiApp() {
     toggleCollectionExpanded,
     running,
     baseUrl,
+    lastKnownBaseUrl,
     displayUrl,
     placeholderUrl,
     showCountQuery,
@@ -285,5 +350,6 @@ export function useRandomApiApp() {
     handleStop,
     sendRequest,
     setRequestMethod,
+    updateEndpointMock,
   }
 }

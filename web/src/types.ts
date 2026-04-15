@@ -25,6 +25,13 @@ export interface SchemaField {
 
 export type EndpointResponseMode = 'schema' | 'sampleJson'
 
+/** Named response example (Postman-style); used when `responseSource` is `example`. */
+export interface EndpointExample {
+  name: string
+  /** JSON body as string */
+  body: string
+}
+
 export interface EndpointConfig {
   path: string
   schema: SchemaField[]
@@ -32,6 +39,17 @@ export interface EndpointConfig {
   responseMode?: EndpointResponseMode
   /** Example response body (JSON text); used when `responseMode` is `sampleJson`. */
   sampleJson?: string
+  /** Per-route HTTP method; falls back to global `requestMethod` when omitted. */
+  method?: HttpMethod
+  /** Artificial delay before responding (ms). */
+  delayMs?: number
+  /** Override HTTP status (defaults by method: GET/HEAD 200, POST 201, PUT/PATCH 200, DELETE 204). */
+  httpStatus?: number
+  /** Serve a named example body vs generated mock data. */
+  responseSource?: 'generated' | 'example'
+  /** Active example index when `responseSource` is `example`. */
+  activeExampleIndex?: number
+  examples?: EndpointExample[]
 }
 
 export interface ServerStatusPayload {
@@ -51,7 +69,17 @@ export interface StartServerResult {
 /** How mock list/object values are generated for the mock HTTP server. */
 export type MockDataMode = 'seeded' | 'random'
 
-export const PERSIST_STATE_VERSION = 3 as const
+/** App shell: mock/schema builder vs HTTP client + import/export. */
+export type AppUiMode = 'genApi' | 'queryApi'
+
+export const PERSIST_STATE_VERSION = 5 as const
+
+export interface MockEnvironment {
+  id: string
+  name: string
+  /** Variable values for substitution in paths and {{baseUrl}} in exports. */
+  variables: Record<string, string>
+}
 
 export interface MockCollection {
   id: string
@@ -65,9 +93,11 @@ export interface MockWorkspace {
   collections: MockCollection[]
 }
 
-/** Full app state persisted to SQLite (v2). */
+/** Full app state persisted to SQLite (v5). */
 export interface PersistedAppState {
   version: typeof PERSIST_STATE_VERSION
+  /** Gen API = mock builder; Query API = HTTP client + import/export. */
+  uiMode: AppUiMode
   workspaces: MockWorkspace[]
   selectedWorkspaceId: string
   selectedCollectionId: string
@@ -75,6 +105,8 @@ export interface PersistedAppState {
   requestMethod: HttpMethod
   sampleCount: string
   mockDataMode: MockDataMode
+  environments: MockEnvironment[]
+  selectedEnvironmentId: string
 }
 
 export type LoadAppStateResult =

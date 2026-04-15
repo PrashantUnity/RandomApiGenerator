@@ -2,6 +2,7 @@
 
 import type {
   EndpointConfig,
+  HttpMethod,
   LoadAppStateResult,
   MockDataMode,
   PersistedAppState,
@@ -12,7 +13,11 @@ import type {
 
 export type StartServerPayload =
   | EndpointConfig[]
-  | { endpoints: EndpointConfig[]; mockDataMode?: MockDataMode }
+  | {
+      endpoints: EndpointConfig[]
+      mockDataMode?: MockDataMode
+      defaultMethod?: HttpMethod
+    }
 
 declare global {
   interface Window {

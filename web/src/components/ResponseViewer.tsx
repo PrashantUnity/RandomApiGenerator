@@ -1,4 +1,10 @@
+import { useTabListKeyboard } from '../hooks/useTabListKeyboard'
 import type { ResponseMeta } from '../types'
+import { formatBytes } from '../lib/formatBytes'
+
+const RESPONSE_BODY_TAB_IDS = ['pm-response-body-pretty', 'pm-response-body-raw'] as const
+
+export type ResponseEmptyVariant = 'genApi' | 'queryApi'
 
 export type ResponseViewerProps = {
   fetchError: string
@@ -7,6 +13,13 @@ export type ResponseViewerProps = {
   bodyView: 'pretty' | 'raw'
   responseMeta: ResponseMeta | null
   onBodyViewChange: (v: 'pretty' | 'raw') => void
+  /** Hint text when there is no response yet (Gen API vs Query API). */
+  emptyVariant?: ResponseEmptyVariant
+}
+
+const EMPTY_HINT: Record<ResponseEmptyVariant, string> = {
+  genApi: 'Start the server, then use Send to preview the JSON response body here.',
+  queryApi: 'Enter a URL and use Send to preview the response body here.',
 }
 
 export function ResponseViewer({
@@ -16,7 +29,18 @@ export function ResponseViewer({
   bodyView,
   responseMeta,
   onBodyViewChange,
+  emptyVariant = 'genApi',
 }: ResponseViewerProps) {
+  const emptyHint = EMPTY_HINT[emptyVariant]
+
+  const bodyTabIdx = bodyView === 'pretty' ? 0 : 1
+  const { onKeyDown: onBodyTabsKeyDown, tabIndexFor: bodyTabIndexFor } = useTabListKeyboard({
+    tabCount: 2,
+    selectedIndex: bodyTabIdx,
+    onSelectIndex: (i) => onBodyViewChange(i === 0 ? 'pretty' : 'raw'),
+    tabIds: RESPONSE_BODY_TAB_IDS,
+  })
+
   return (
     <section className="pm-response" aria-label="Response">
       <div className="pm-response__head">
@@ -30,15 +54,23 @@ export function ResponseViewer({
                 {responseMeta.status} {responseMeta.statusText}
               </span>
               <span className="pm-chip pm-chip--muted">{responseMeta.timeMs} ms</span>
-              <span className="pm-chip pm-chip--muted">
-                {(responseMeta.sizeBytes / 1024).toFixed(1)} KB
-              </span>
+              <span className="pm-chip pm-chip--muted">{formatBytes(responseMeta.sizeBytes)}</span>
             </>
           )}
         </div>
-        <div className="pm-response__tabs">
+        <div
+          className="pm-response__tabs"
+          role="tablist"
+          aria-label="Response body format"
+          tabIndex={-1}
+          onKeyDown={onBodyTabsKeyDown}
+        >
           <button
             type="button"
+            role="tab"
+            id="pm-response-body-pretty"
+            tabIndex={bodyTabIndexFor(0)}
+            aria-selected={bodyView === 'pretty'}
             className={`pm-subtab ${bodyView === 'pretty' ? 'pm-subtab--active' : ''}`}
             onClick={() => onBodyViewChange('pretty')}
           >
@@ -46,6 +78,10 @@ export function ResponseViewer({
           </button>
           <button
             type="button"
+            role="tab"
+            id="pm-response-body-raw"
+            tabIndex={bodyTabIndexFor(1)}
+            aria-selected={bodyView === 'raw'}
             className={`pm-subtab ${bodyView === 'raw' ? 'pm-subtab--active' : ''}`}
             onClick={() => onBodyViewChange('raw')}
           >
@@ -54,18 +90,16 @@ export function ResponseViewer({
         </div>
       </div>
       <div className="pm-response__body">
-        {fetchError && !preview && (
-          <pre className="pm-code pm-code--err" role="alert">
+        {fetchError && (
+          <p className="pm-response__fetch-err" role="alert">
             {fetchError}
-          </pre>
+          </p>
         )}
         {preview && <pre className="pm-code">{bodyView === 'pretty' ? preview : rawBody}</pre>}
         {!preview && !fetchError && (
           <div className="pm-response__empty">
             <p className="pm-response__empty-title">No response yet</p>
-            <p className="pm-response__empty-hint">
-              Start the server, then use Send to preview the JSON response body here.
-            </p>
+            <p className="pm-response__empty-hint">{emptyHint}</p>
           </div>
         )}
       </div>

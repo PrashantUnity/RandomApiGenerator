@@ -31,6 +31,16 @@ export function RequestSection({
   onRequestBodyChange,
   onSend,
 }: RequestSectionProps) {
+  const mockSendBlocked = !running
+  const sendDisabled = !electron || mockSendBlocked
+
+  let sendTitle = `Send HTTP ${requestMethod} request`
+  if (!electron) {
+    sendTitle = 'Requires Electron desktop app'
+  } else if (mockSendBlocked) {
+    sendTitle = 'Start the mock server first'
+  }
+
   return (
     <section className="pm-request" aria-label="Request">
       <div className="pm-request__row">
@@ -40,7 +50,6 @@ export function RequestSection({
             className="pm-request__method-select"
             value={requestMethod}
             onChange={(e) => onRequestMethodChange(e.target.value as HttpMethod)}
-            disabled={!running}
             aria-label="HTTP method"
           >
             {HTTP_METHODS.map((m) => (
@@ -51,7 +60,11 @@ export function RequestSection({
           </select>
         </label>
         <div className="pm-request__url-wrap">
+          <label className="pm-sr-only" htmlFor="pm-request-display-url">
+            Request URL (mock server base and path)
+          </label>
           <input
+            id="pm-request-display-url"
             className="pm-request__url"
             readOnly
             value={displayUrl || placeholderUrl}
@@ -61,13 +74,29 @@ export function RequestSection({
         <button
           type="button"
           className="pm-btn pm-btn--send"
-          disabled={!running || !electron}
+          disabled={sendDisabled}
+          title={sendTitle}
           onClick={() => void onSend()}
-          aria-label={`Send HTTP ${requestMethod} request`}
+          aria-label={sendTitle}
         >
           Send
         </button>
       </div>
+
+      {!running && electron ? (
+        <p className="pm-request__hint">
+          <strong>Mock server is off.</strong> Click <strong>Start</strong> above to serve your routes on{' '}
+          <code>127.0.0.1</code>. Need to hit an external API without the mock? Switch to{' '}
+          <strong>Query API</strong> mode in the sidebar.
+        </p>
+      ) : null}
+
+      {running ? (
+        <p className="pm-request__hint pm-request__hint--muted">
+          Traffic goes to the <strong>local mock</strong> only. Edit the route on the Response tab.
+        </p>
+      ) : null}
+
       {showCountQuery && (
         <div className="pm-request__meta">
           <label className="pm-query">
@@ -77,12 +106,12 @@ export function RequestSection({
               value={sampleCount}
               onChange={(e) => onSampleCountChange(e.target.value)}
               inputMode="numeric"
-              disabled={!running}
               aria-label="Number of sample records (count query parameter)"
             />
           </label>
         </div>
       )}
+
       {showRequestBodyEditor && (
         <div className="pm-request__body">
           <label className="pm-request__body-label" htmlFor="pm-request-body">
@@ -94,7 +123,6 @@ export function RequestSection({
             value={requestBody}
             onChange={(e) => onRequestBodyChange(e.target.value)}
             placeholder="Optional JSON object to merge with the mock response"
-            disabled={!running}
             spellCheck={false}
             aria-label="Request body JSON"
           />

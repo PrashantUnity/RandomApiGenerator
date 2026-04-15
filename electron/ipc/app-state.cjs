@@ -33,6 +33,11 @@ function normalizeMockDataMode(raw) {
   return raw === 'random' ? 'random' : 'seeded';
 }
 
+function normalizeUiMode(raw) {
+  if (raw === 'queryApi' || raw === 'genApi') return raw;
+  return 'genApi';
+}
+
 function migrateDbRowToV2(row) {
   const rm = ALLOWED_METHODS.has(row.legacyRequestMethod) ? row.legacyRequestMethod : 'GET';
   const sc = normalizeSampleCountString(row.legacySampleCount);
@@ -41,6 +46,7 @@ function migrateDbRowToV2(row) {
   if (Array.isArray(raw)) {
     const wsId = randomUUID();
     const colId = randomUUID();
+    const envId = randomUUID();
     let eps = raw.length ? raw : [defaultEndpointV1()];
     const si = Math.min(
       Math.max(0, Math.floor(Number(row.legacySelectedIndex)) || 0),
@@ -48,6 +54,7 @@ function migrateDbRowToV2(row) {
     );
     return {
       version: PERSIST_STATE_VERSION,
+      uiMode: 'genApi',
       workspaces: [
         {
           id: wsId,
@@ -61,27 +68,61 @@ function migrateDbRowToV2(row) {
       requestMethod: rm,
       sampleCount: sc,
       mockDataMode: 'seeded',
+      environments: [{ id: envId, name: 'Default', variables: {} }],
+      selectedEnvironmentId: envId,
     };
   }
 
   if (raw && typeof raw === 'object' && raw.version === 2 && Array.isArray(raw.workspaces)) {
+    const envId = randomUUID();
     return {
       ...raw,
       version: PERSIST_STATE_VERSION,
+      uiMode: 'genApi',
+      environments: [{ id: envId, name: 'Default', variables: {} }],
+      selectedEnvironmentId: envId,
       requestMethod: ALLOWED_METHODS.has(raw.requestMethod) ? raw.requestMethod : rm,
       sampleCount: normalizeSampleCountString(raw.sampleCount ?? sc),
       mockDataMode: 'seeded',
     };
   }
 
+  if (raw && typeof raw === 'object' && raw.version === 3 && Array.isArray(raw.workspaces)) {
+    const envId = randomUUID();
+    return {
+      ...raw,
+      version: PERSIST_STATE_VERSION,
+      uiMode: 'genApi',
+      environments: [{ id: envId, name: 'Default', variables: {} }],
+      selectedEnvironmentId: envId,
+      requestMethod: ALLOWED_METHODS.has(raw.requestMethod) ? raw.requestMethod : rm,
+      sampleCount: normalizeSampleCountString(raw.sampleCount ?? sc),
+      mockDataMode: normalizeMockDataMode(raw.mockDataMode),
+    };
+  }
+
   if (
     raw &&
     typeof raw === 'object' &&
-    raw.version === PERSIST_STATE_VERSION &&
+    (raw.version === 4 || raw.version === PERSIST_STATE_VERSION) &&
     Array.isArray(raw.workspaces)
   ) {
+    const envId = randomUUID();
+    const envs =
+      Array.isArray(raw.environments) && raw.environments.length > 0
+        ? raw.environments
+        : [{ id: envId, name: 'Default', variables: {} }];
+    const selEnv =
+      typeof raw.selectedEnvironmentId === 'string' && envs.some((e) => e.id === raw.selectedEnvironmentId)
+        ? raw.selectedEnvironmentId
+        : envs[0].id;
+    const fromV4 = raw.version === 4;
     return {
       ...raw,
+      version: PERSIST_STATE_VERSION,
+      uiMode: fromV4 ? 'genApi' : normalizeUiMode(raw.uiMode),
+      environments: envs,
+      selectedEnvironmentId: selEnv,
       requestMethod: ALLOWED_METHODS.has(raw.requestMethod) ? raw.requestMethod : rm,
       sampleCount: normalizeSampleCountString(raw.sampleCount ?? sc),
       mockDataMode: normalizeMockDataMode(raw.mockDataMode),
@@ -103,12 +144,32 @@ function flattenEndpointsFromWorkspace(workspaces, workspaceId) {
   return out;
 }
 
-function validatePersistedV2(s) {
+function validatePersisted(s) {
   if (!s || s.version !== PERSIST_STATE_VERSION) {
     return { ok: false, error: 'invalid persisted state' };
   }
   if (s.mockDataMode !== 'seeded' && s.mockDataMode !== 'random') {
     return { ok: false, error: 'invalid mockDataMode' };
+  }
+  if (s.uiMode !== 'genApi' && s.uiMode !== 'queryApi') {
+    return { ok: false, error: 'invalid uiMode' };
+  }
+  if (!Array.isArray(s.environments) || s.environments.length === 0) {
+    return { ok: false, error: 'environments required' };
+  }
+  if (typeof s.selectedEnvironmentId !== 'string') {
+    return { ok: false, error: 'selectedEnvironmentId required' };
+  }
+  if (!s.environments.some((e) => e.id === s.selectedEnvironmentId)) {
+    return { ok: false, error: 'invalid selectedEnvironmentId' };
+  }
+  for (const env of s.environments) {
+    if (!env || typeof env.id !== 'string' || typeof env.name !== 'string') {
+      return { ok: false, error: 'invalid environment' };
+    }
+    if (!env.variables || typeof env.variables !== 'object' || Array.isArray(env.variables)) {
+      return { ok: false, error: 'invalid environment variables' };
+    }
   }
   if (!Array.isArray(s.workspaces) || s.workspaces.length === 0) {
     return { ok: false, error: 'workspaces required' };
@@ -174,7 +235,8 @@ function registerAppStateHandlers() {
           warning: 'Saved data was invalid or corrupted; starting with defaults.',
         };
       }
-      const struct = validatePersistedV2(migrated);
+      const normalized = { ...migrated, uiMode: normalizeUiMode(migrated.uiMode) };
+      const struct = validatePersisted(normalized);
       if (!struct.ok) {
         return {
           ok: true,
@@ -182,7 +244,7 @@ function registerAppStateHandlers() {
           warning: 'Saved data was invalid or corrupted; starting with defaults.',
         };
       }
-      const repaired = repairPersistedSelection(migrated);
+      const repaired = repairPersistedSelection(normalized);
       if (!repaired) {
         return {
           ok: true,
@@ -194,7 +256,7 @@ function registerAppStateHandlers() {
         repaired.workspaces,
         repaired.selectedWorkspaceId,
       );
-      const v = validateEndpointsConfig(flat);
+      const v = validateEndpointsConfig(flat, repaired.requestMethod);
       if (!v.ok) {
         return {
           ok: true,
@@ -215,11 +277,12 @@ function registerAppStateHandlers() {
     if (!payload || payload.version !== PERSIST_STATE_VERSION) {
       return { ok: false, error: 'invalid payload' };
     }
-    const struct = validatePersistedV2(payload);
+    const payloadNorm = { ...payload, uiMode: normalizeUiMode(payload.uiMode) };
+    const struct = validatePersisted(payloadNorm);
     if (!struct.ok) {
       return { ok: false, error: struct.error };
     }
-    const repaired = repairPersistedSelection(payload);
+    const repaired = repairPersistedSelection(payloadNorm);
     if (!repaired) {
       return { ok: false, error: 'invalid selection' };
     }
@@ -227,7 +290,7 @@ function registerAppStateHandlers() {
       repaired.workspaces,
       repaired.selectedWorkspaceId,
     );
-    const v = validateEndpointsConfig(flat);
+    const v = validateEndpointsConfig(flat, repaired.requestMethod);
     if (!v.ok) {
       return { ok: false, error: v.error };
     }

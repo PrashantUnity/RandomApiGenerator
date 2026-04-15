@@ -1,5 +1,6 @@
 import type {
   EndpointConfig,
+  HttpMethod,
   MockCollection,
   MockDataMode,
   MockWorkspace,
@@ -11,13 +12,19 @@ import { schemaToFormattedSampleJson } from './schemaSync'
 
 export const MAX_WORKSPACES = 10
 export const MAX_COLLECTIONS_PER_WORKSPACE = 20
+export const MAX_ENVIRONMENTS = 15
 
 const defaultSchema = [{ name: 'id', type: 'integer' as const }]
 
-function newEndpoint(pathSuffix: string, mockDataMode: MockDataMode = 'seeded'): EndpointConfig {
+function newEndpoint(
+  pathSuffix: string,
+  mockDataMode: MockDataMode = 'seeded',
+  method: HttpMethod = 'GET',
+): EndpointConfig {
   const schema = [...defaultSchema]
   return {
     path: pathSuffix,
+    method,
     schema,
     sampleJson: schemaToFormattedSampleJson(schema, mockDataMode),
   }
@@ -26,7 +33,8 @@ function newEndpoint(pathSuffix: string, mockDataMode: MockDataMode = 'seeded'):
 export function createDefaultPersistedState(): PersistedAppState {
   const wsId = crypto.randomUUID()
   const colId = crypto.randomUUID()
-  const ep = newEndpoint('users')
+  const envId = crypto.randomUUID()
+  const ep = newEndpoint('users', 'seeded', 'GET')
   ep.schema = [
     { name: 'id', type: 'integer' },
     { name: 'name', type: 'name' },
@@ -36,6 +44,7 @@ export function createDefaultPersistedState(): PersistedAppState {
   ep.sampleJson = schemaToFormattedSampleJson(ep.schema, 'seeded')
   return {
     version: PERSIST_STATE_VERSION,
+    uiMode: 'genApi',
     workspaces: [
       {
         id: wsId,
@@ -55,6 +64,8 @@ export function createDefaultPersistedState(): PersistedAppState {
     requestMethod: 'GET',
     sampleCount: '3',
     mockDataMode: 'seeded',
+    environments: [{ id: envId, name: 'Default', variables: {} }],
+    selectedEnvironmentId: envId,
   }
 }
 
@@ -114,10 +125,15 @@ export function updateSelectedEndpoint(
   }
 }
 
-function newRoute(pathSuffix: string, mockDataMode: MockDataMode = 'seeded'): EndpointConfig {
+function newRoute(
+  pathSuffix: string,
+  mockDataMode: MockDataMode = 'seeded',
+  method: HttpMethod = 'GET',
+): EndpointConfig {
   const schema: SchemaField[] = [{ name: 'id', type: 'integer' }]
   return {
     path: pathSuffix,
+    method,
     schema,
     sampleJson: schemaToFormattedSampleJson(schema, mockDataMode),
   }
@@ -128,7 +144,7 @@ export function addRouteToSelection(tree: PersistedAppState): PersistedAppState 
   const col = ws?.collections.find((c) => c.id === tree.selectedCollectionId)
   if (!ws || !col) return tree
   const n = col.endpoints.length + 1
-  const nextEp = newRoute(`resource_${n}`, tree.mockDataMode ?? 'seeded')
+  const nextEp = newRoute(`resource_${n}`, tree.mockDataMode ?? 'seeded', tree.requestMethod)
   const nextCol: MockCollection = {
     ...col,
     endpoints: [...col.endpoints, nextEp],
@@ -151,7 +167,7 @@ export function addCollectionToWorkspace(tree: PersistedAppState): PersistedAppS
   const ws = tree.workspaces.find((w) => w.id === tree.selectedWorkspaceId)
   if (!ws || ws.collections.length >= MAX_COLLECTIONS_PER_WORKSPACE) return tree
   const colId = crypto.randomUUID()
-  const ep = newRoute('resource_1', tree.mockDataMode ?? 'seeded')
+  const ep = newRoute('resource_1', tree.mockDataMode ?? 'seeded', tree.requestMethod)
   const newCol: MockCollection = {
     id: colId,
     name: `Collection ${ws.collections.length + 1}`,
@@ -171,7 +187,7 @@ export function addWorkspace(tree: PersistedAppState): PersistedAppState {
   if (tree.workspaces.length >= MAX_WORKSPACES) return tree
   const wsId = crypto.randomUUID()
   const colId = crypto.randomUUID()
-  const ep = newRoute('users', tree.mockDataMode ?? 'seeded')
+  const ep = newRoute('users', tree.mockDataMode ?? 'seeded', tree.requestMethod)
   return {
     ...tree,
     selectedWorkspaceId: wsId,
@@ -225,7 +241,7 @@ export function removeSelectedRoute(tree: PersistedAppState): PersistedAppState 
 
 function makeSingletonCollection(mockDataMode: MockDataMode = 'seeded'): MockCollection {
   const colId = crypto.randomUUID()
-  const ep = newRoute('users', mockDataMode)
+  const ep = newRoute('users', mockDataMode, 'GET')
   return { id: colId, name: 'Default', endpoints: [ep] }
 }
 
@@ -302,6 +318,49 @@ export function setCollectionName(
               c.id === collectionId ? { ...c, name } : c,
             ),
           },
+    ),
+  }
+}
+
+export function addEnvironment(tree: PersistedAppState): PersistedAppState {
+  if (tree.environments.length >= MAX_ENVIRONMENTS) return tree
+  const id = crypto.randomUUID()
+  return {
+    ...tree,
+    environments: [
+      ...tree.environments,
+      { id, name: `Environment ${tree.environments.length + 1}`, variables: {} },
+    ],
+    selectedEnvironmentId: id,
+  }
+}
+
+export function setSelectedEnvironment(tree: PersistedAppState, environmentId: string): PersistedAppState {
+  if (!tree.environments.some((e) => e.id === environmentId)) return tree
+  return { ...tree, selectedEnvironmentId: environmentId }
+}
+
+export function setEnvironmentNameForId(
+  tree: PersistedAppState,
+  environmentId: string,
+  name: string,
+): PersistedAppState {
+  return {
+    ...tree,
+    environments: tree.environments.map((e) => (e.id === environmentId ? { ...e, name } : e)),
+  }
+}
+
+export function setEnvironmentVariable(
+  tree: PersistedAppState,
+  environmentId: string,
+  key: string,
+  value: string,
+): PersistedAppState {
+  return {
+    ...tree,
+    environments: tree.environments.map((e) =>
+      e.id === environmentId ? { ...e, variables: { ...e.variables, [key]: value } } : e,
     ),
   }
 }

@@ -1,0 +1,206 @@
+/* Response */
+.pm-response {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-panel);
+}
+
+.pm-response__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--color-bg-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pm-response__title {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--color-text-strong);
+  margin-right: auto;
+}
+
+.pm-response__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pm-chip {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  padding: 3px var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-success-chip-bg);
+  color: var(--color-success-chip-fg);
+}
+
+.pm-chip--ok {
+  background: var(--color-success-chip-bg);
+  color: var(--color-success-chip-fg);
+}
+
+.pm-chip--err {
+  background: var(--color-danger-muted);
+  color: var(--color-danger-fg-strong);
+}
+
+.pm-chip--muted {
+  background: var(--color-bg-muted);
+  color: var(--color-text-muted);
+}
+
+.pm-response__tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.pm-subtab {
+  padding: var(--control-padding-y) var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--font-size-tab-sub);
+  font-weight: 500;
+  min-height: 32px;
+  box-sizing: border-box;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.pm-subtab--active {
+  background: var(--color-bg-surface);
+  color: var(--color-text-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.pm-response__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--code-bg);
+}
+
+.pm-response__fetch-err {
+  margin: 0;
+  padding: 10px var(--space-3);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--code-err-fg);
+  background: var(--code-err-bg);
+  border-bottom: 1px solid var(--code-err-border);
+}
+
+.pm-code {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--code-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.pm-code--err {
+  color: var(--code-err-fg);
+}
+
+.pm-response__empty {
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.pm-response__empty-title {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-strong);
+}
+
+.pm-response__empty-hint {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* Buttons */
+.pm-btn {
+  font: inherit;
+  font-size: var(--control-font-size);
+  padding: var(--control-padding-y) 14px;
+  min-height: var(--control-min-height);
+  box-sizing: border-box;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text-strong);
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.pm-btn--ghost:hover:not(:disabled) {
+  background: var(--color-bg-muted);
+  border-color: var(--color-border-strong);
+}
+
+.pm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pm-btn--danger-ghost {
+  margin-left: auto;
+  border-color: var(--color-danger-border);
+  color: var(--color-danger-fg-emphasis);
+  background: var(--color-bg-surface);
+}
+
+.pm-btn--danger-ghost:hover:not(:disabled) {
+  background: var(--color-danger-muted);
+}
+
+@media (max-width: 900px) {
+  .pm-app {
+    flex-direction: column;
+  }
+
+  .pm-sidebar {
+    width: 100%;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    border-right: none;
+    border-bottom: 1px solid var(--sidebar-border);
+    max-height: min(55vh, 420px);
+    min-height: 0;
+  }
+
+  .pm-sidebar__section--collections {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pm-sidebar__list {
+    max-height: min(32vh, 260px);
+  }
+
+  .pm-sidebar__footer {
+    width: 100%;
+    flex-shrink: 0;
+  }
+}

@@ -25,8 +25,14 @@ function startMockServer(payload) {
   const endpointsConfig = Array.isArray(payload) ? payload : payload?.endpoints;
   const mockDataMode =
     !Array.isArray(payload) && payload?.mockDataMode === 'random' ? 'random' : 'seeded';
+  const defaultMethod =
+    !Array.isArray(payload) &&
+    typeof payload?.defaultMethod === 'string' &&
+    payload.defaultMethod
+      ? payload.defaultMethod
+      : 'GET';
 
-  const v = validateEndpointsConfig(endpointsConfig);
+  const v = validateEndpointsConfig(endpointsConfig, defaultMethod);
   if (!v.ok) {
     return Promise.resolve({ status: 'error', error: v.error });
   }
@@ -34,7 +40,7 @@ function startMockServer(payload) {
   return closeMockServer().then(
     () =>
       new Promise((resolve) => {
-        const normalized = normalizeEndpointsForRoutes(endpointsConfig);
+        const normalized = normalizeEndpointsForRoutes(endpointsConfig, defaultMethod);
         const apiApp = buildExpressApp(normalized, { mockDataMode });
 
         let settled = false;
